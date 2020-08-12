@@ -22,6 +22,9 @@ from gnuradio import analog
 from gnuradio import blocks
 from gnuradio.gr.pubsub import pubsub
 
+# PyLint can't reliably detect C++ exports in modules, so let's disable that
+# pylint: disable=no-member
+
 DESC_KEY = 'desc'
 SAMP_RATE_KEY = 'samp_rate'
 LINK_RATE_KEY = 'link_rate'
@@ -35,7 +38,6 @@ WAVEFORM_FREQ_KEY = 'waveform_freq'
 WAVEFORM_OFFSET_KEY = 'waveform_offset'
 WAVEFORM2_FREQ_KEY = 'waveform2_freq'
 FREQ_RANGE_KEY = 'freq_range'
-GAIN_RANGE_KEY = 'gain_range'
 TYPE_KEY = 'type'
 
 WAVEFORMS = {
@@ -55,6 +57,12 @@ class USRPSiggen(gr.top_block, pubsub, UHDApp):
     def __init__(self, args):
         gr.top_block.__init__(self)
         pubsub.__init__(self)
+        # If the power argument is given, we need to turn that into a power
+        # *reference* level. This is a bit of a hack because we're assuming
+        # knowledge of UHDApp (i.e. we're leaking abstractions). But it's simple
+        # and harmless enough.
+        if args.power:
+            args.power -= 20 * math.log10(args.amplitude)
         UHDApp.__init__(self, args=args, prefix="UHD-SIGGEN")
         self.extra_sink = None
 
@@ -78,8 +86,7 @@ class USRPSiggen(gr.top_block, pubsub, UHDApp):
         self.publish(SAMP_RATE_KEY, lambda: self.usrp.get_samp_rate())
         self.publish(DESC_KEY, lambda: self.usrp_description)
         self.publish(FREQ_RANGE_KEY, lambda: self.usrp.get_freq_range(self.channels[0]))
-        self.publish(GAIN_RANGE_KEY, lambda: self.usrp.get_gain_range(self.channels[0]))
-        self.publish(GAIN_KEY, lambda: self.usrp.get_gain(self.channels[0]))
+        self.publish(GAIN_KEY, lambda: self.get_gain_or_power())
 
         self[SAMP_RATE_KEY] = args.samp_rate
         self[TX_FREQ_KEY] = args.freq
@@ -92,12 +99,13 @@ class USRPSiggen(gr.top_block, pubsub, UHDApp):
 
         #subscribe set methods
         self.subscribe(SAMP_RATE_KEY, self.set_samp_rate)
-        self.subscribe(GAIN_KEY, self.set_gain)
+        self.subscribe(GAIN_KEY, self.set_gain_or_power)
         self.subscribe(TX_FREQ_KEY, self.set_freq)
         self.subscribe(AMPLITUDE_KEY, self.set_amplitude)
         self.subscribe(WAVEFORM_FREQ_KEY, self.set_waveform_freq)
         self.subscribe(WAVEFORM2_FREQ_KEY, self.set_waveform2_freq)
         self.subscribe(TYPE_KEY, self.set_waveform)
+        self.subscribe(RF_FREQ_KEY, self.update_gain_range)
 
         #force update on pubsub keys
         for key in (SAMP_RATE_KEY, GAIN_KEY, TX_FREQ_KEY,
@@ -234,7 +242,47 @@ class USRPSiggen(gr.top_block, pubsub, UHDApp):
         else:
             return True # Waveform not yet set
         self.vprint("Set amplitude to:", amplitude)
+        self.update_gain_range()
         return True
+
+    def get_gain_or_power(self):
+        """
+        Depending on gain type, return either a power level or the current gain
+        """
+        if self.gain_type == self.GAIN_TYPE_GAIN:
+            return self.usrp.get_gain(self.channels[0])
+        # else:
+        return self.usrp.get_power_reference(self.channels[0]) \
+                    + 20 * math.log10(self[AMPLITUDE_KEY])
+
+    def set_gain_or_power(self, gain_or_power):
+        """
+        Call this if a gain or power value changed, but you're not sure which it
+        is.
+
+        If it's a power, we subtract the signal offset to generate a reference
+        power.
+        """
+        if self.gain_type == self.GAIN_TYPE_POWER:
+            self.set_power_reference(
+                gain_or_power - 20 * math.log10(self[AMPLITUDE_KEY]))
+        else:
+            self.set_gain(gain_or_power)
+
+    def update_gain_range(self):
+        """
+        Update self.gain_range.
+        """
+        if self.gain_type == self.GAIN_TYPE_POWER:
+            power_range = self.usrp.get_power_range(self.channels[0])
+            ampl_offset = 20 * math.log10(self[AMPLITUDE_KEY])
+            self.gain_range = uhd.meta_range(
+                math.floor(power_range.start() + ampl_offset),
+                math.ceil(power_range.stop() + ampl_offset),
+                power_range.step()
+            )
+            self.vprint("Updated power range to {:.2f} ... {:.2f} dBm.".format(
+                self.gain_range.start(), self.gain_range.stop()))
 
 
 def setup_argparser():
