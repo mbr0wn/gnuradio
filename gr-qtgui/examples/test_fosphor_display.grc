@@ -1,0 +1,475 @@
+options:
+  parameters:
+    author: Grant Meyerhoff <grant.meyerhoff@ni.com
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: This is a standalone test for the fosphor Qt widget. This widget
+      is most often used in combination with the fosphor RFNoC block.
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: test_fosphor_display
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Fosphor Display Test
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: amplitude
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: Signal Amplitude
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '.1'
+    step: '.05'
+    stop: '1.0'
+    value: '.7'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [472, 12.0]
+    rotation: 0
+    state: true
+- name: fft_size
+  id: variable
+  parameters:
+    comment: ''
+    value: '256'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [288, 12.0]
+    rotation: 0
+    state: enabled
+- name: freq
+  id: variable
+  parameters:
+    comment: ''
+    value: 1.5e9
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [192, 76.0]
+    rotation: 0
+    state: enabled
+- name: pwr_bins
+  id: variable
+  parameters:
+    comment: ''
+    value: '64'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [376, 12.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: int(1e8)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [192, 12.0]
+    rotation: 0
+    state: enabled
+- name: analog_fastnoise_source_x_0
+  id: analog_fastnoise_source_x
+  parameters:
+    affinity: ''
+    alias: ''
+    amp: '.9'
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    noise_type: analog.GR_GAUSSIAN
+    samples: '8192'
+    seed: '0'
+    type: complex
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [48, 140.0]
+    rotation: 0
+    state: true
+- name: analog_sig_source_x_0
+  id: analog_sig_source_x
+  parameters:
+    affinity: ''
+    alias: ''
+    amp: amplitude
+    comment: ''
+    freq: freq
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    offset: '0'
+    phase: '0'
+    samp_rate: samp_rate
+    type: complex
+    waveform: analog.GR_COS_WAVE
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [40, 244.0]
+    rotation: 0
+    state: true
+- name: blocks_add_xx_0
+  id: blocks_add_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_inputs: '2'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [256, 200.0]
+    rotation: 0
+    state: true
+- name: blocks_complex_to_mag_0
+  id: blocks_complex_to_mag
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    vlen: fft_size
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [832, 404.0]
+    rotation: 180
+    state: true
+- name: blocks_stream_to_vector_0
+  id: blocks_stream_to_vector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: fft_size
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [536, 216.0]
+    rotation: 0
+    state: true
+- name: blocks_throttle2_0
+  id: blocks_throttle2
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    ignoretag: 'True'
+    limit: auto
+    maximum: '0.1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samples_per_second: samp_rate
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [360, 204.0]
+    rotation: 0
+    state: true
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nFormat Data for histogram\n\nThis block takes the data\
+      \ from an fft and collects and formats for the\nQT GUI Fosphor Display Block.\
+      \ This takes 64 samples, and organizes each\nsample into power bins across the\
+      \ frequency span in question. After this,\nthe block sends those bins to the\
+      \ display block in 62 samples, the max levels\nin 1 vector, and the average\
+      \ level in 1 vector and tags the last vector.\n\nThe last two vectors can be\
+      \ formatted to show whatever value the user would like\nrather than showing\
+      \ the average and maximum values.\n\"\"\"\n\nimport numpy as np\nfrom gnuradio\
+      \ import gr\nimport pmt\n\n\nclass blk(gr.sync_block):\n\n    def __init__(self,\
+      \ vec_length=256, bin_length=64, bin_size=2):  \n        \"\"\"arguments to\
+      \ this function show up as parameters in GRC\"\"\"\n        self.index = 0\n\
+      \        # Amount of values in each frequency vector\n        self.vec_length\
+      \ = vec_length\n        # Amount of power bins to use\n        self.bin_length\
+      \ = bin_length\n        # How large each bin size is, for sorting samples\n\
+      \        self.bin_size = bin_size\n        # Collect data over 64 vectors, then\
+      \ send out data while collecting next 64 vectors\n        self.activeBin = 0\n\
+      \        self.bins = np.zeros(shape=(self.bin_length + 1, self.vec_length),\
+      \ dtype=np.ubyte)\n        self.bins2 = np.zeros(shape=(self.bin_length + 1,\
+      \ self.vec_length), dtype=np.ubyte)\n        self.average = np.zeros(vec_length)\n\
+      \        self.max = np.zeros(vec_length)\n        gr.sync_block.__init__(\n\
+      \            self,\n            name='Format data for histogram',\n        \
+      \    in_sig=[(np.float32, vec_length)],\n            out_sig=[(np.ubyte, vec_length)]\n\
+      \        )\n\n    def update_vectors(self, array):\n        \"\"\" \n      \
+      \  Take each vector, add to the weight of the bin vectors, and update max and\n\
+      \        average vectors as needed\n        \"\"\"\n        for index in range(len(array)):\n\
+      \            value = array[index] // self.bin_size\n            self.average[index]\
+      \ = self.average[index] + value / self.bin_length\n            if self.activeBin\
+      \ == 0:\n                for idx in range(min(value , self.bin_length - 1)):\n\
+      \                    self.bins[idx, index] = self.bins[idx, index] + 3\n   \
+      \         else:\n                for idx in range(min(value , self.bin_length\
+      \ - 1)):\n                    self.bins2[idx, index] = self.bins2[idx, index]\
+      \ + 3\n            if value > self.max[index]:\n                self.max[index]\
+      \ = value\n\n    def work(self, input_items, output_items):\n        for index\
+      \ in range(len(input_items[0])):\n            self.update_vectors(input_items[0][index].astype(np.ubyte))\n\
+      \            if self.index == self.bin_length + 1:\n                output_items[0][index]\
+      \ = 3 * self.max\n            elif self.index == self.bin_length + 2:\n    \
+      \            output_items[0][index] = 3 * self.average\n                self.average\
+      \ = np.zeros(self.vec_length)\n                self.max = np.zeros(self.vec_length)\n\
+      \                key = pmt.intern('rx_eob')\n                value = pmt.intern('#t')\n\
+      \                self.add_item_tag(0, self.nitems_written(0) + index, key, value)\n\
+      \                self.index = 0\n                if self.activeBin == 0:\n \
+      \                   self.activeBin = 1\n                    self.bins2 = np.zeros(shape=(self.bin_length\
+      \ + 1, self.vec_length), dtype=np.ubyte)\n                else:\n          \
+      \          self.activeBin = 0\n                    self.bins = np.zeros(shape=(self.bin_length\
+      \ + 1, self.vec_length), dtype=np.ubyte)\n            else:\n              \
+      \  if self.activeBin == 0:\n                    output_items[0][index] = self.bins2[self.index]\n\
+      \                else:\n                    output_items[0][index] = self.bins[self.index]\n\
+      \            self.index = self.index + 1\n        return len(output_items[0])"
+    affinity: ''
+    alias: ''
+    bin_length: pwr_bins
+    bin_size: '2'
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    vec_length: fft_size
+  states:
+    _io_cache: ('Format data for histogram', 'blk', [('vec_length', '256'), ('bin_length',
+      '64'), ('bin_size', '2')], [('0', 'float', 256)], [('0', 'byte', 256)], 'arguments
+      to this function show up as parameters in GRC', ['bin_length', 'bin_size', 'vec_length'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [576, 356.0]
+    rotation: 180
+    state: true
+- name: epy_block_0_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nFormat Data for waterfall\n\nThis block simply forwards\
+      \ the fft data vectors as 8-bit vector.\nThe user can alter this to display\
+      \ a different result as desired.\n\"\"\"\n\nimport numpy as np\nfrom gnuradio\
+      \ import gr\n\nclass blk(gr.sync_block):\n\n    def __init__(self, vec_size=256):\n\
+      \        gr.sync_block.__init__(\n            self,\n            name='Format\
+      \ data for Waterfall',\n            in_sig=[(np.single, vec_size)],\n      \
+      \      out_sig=[(np.ubyte, vec_size)]\n        )\n\n    def work(self, input_items,\
+      \ output_items):\n        output_items[0][:] = input_items[0].astype(np.ubyte)\n\
+      \        return len(output_items[0])"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    vec_size: fft_size
+  states:
+    _io_cache: ('Format data for Waterfall', 'blk', [('vec_size', '256')], [('0',
+      'float', 256)], [('0', 'byte', 256)], '', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [584, 452.0]
+    rotation: 180
+    state: true
+- name: fft_vxx_0
+  id: fft_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    fft_size: fft_size
+    forward: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    nthreads: '1'
+    shift: 'True'
+    type: complex
+    window: window.blackmanharris(fft_size)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [704, 180.0]
+    rotation: 0
+    state: true
+- name: qtgui_fosphor_display_0
+  id: qtgui_fosphor_display
+  parameters:
+    affinity: ''
+    alias: ''
+    center_freq: freq
+    comment: ''
+    fftsize: fft_size
+    frame_rate: '30'
+    grid_enabled: 'False'
+    gui_hint: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    palette: iron
+    pwr_bins: pwr_bins
+    samp_rate: samp_rate
+    wf_enabled: 'True'
+    wf_lines: '512'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [224, 348.0]
+    rotation: 180
+    state: enabled
+- name: qtgui_time_sink_x_0
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'True'
+    axislabels: 'True'
+    color1: blue
+    color10: dark blue
+    color2: red
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'False'
+    entags: 'True'
+    grid: 'True'
+    gui_hint: ''
+    label1: Signal 1
+    label10: Signal 10
+    label2: Signal 2
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '""'
+    nconnections: '1'
+    size: 1024*4
+    srate: '1'
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: 1024*64
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_TAG
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '"rx_eob"'
+    type: float
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitude
+    ymax: '1'
+    ymin: '-1'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1272, 632.0]
+    rotation: 0
+    state: disabled
+
+connections:
+- [analog_fastnoise_source_x_0, '0', blocks_add_xx_0, '0']
+- [analog_sig_source_x_0, '0', blocks_add_xx_0, '1']
+- [blocks_add_xx_0, '0', blocks_throttle2_0, '0']
+- [blocks_complex_to_mag_0, '0', epy_block_0, '0']
+- [blocks_complex_to_mag_0, '0', epy_block_0_0, '0']
+- [blocks_stream_to_vector_0, '0', fft_vxx_0, '0']
+- [blocks_throttle2_0, '0', blocks_stream_to_vector_0, '0']
+- [epy_block_0, '0', qtgui_fosphor_display_0, '0']
+- [epy_block_0_0, '0', qtgui_fosphor_display_0, '1']
+- [fft_vxx_0, '0', blocks_complex_to_mag_0, '0']
+
+metadata:
+  file_format: 1
+  grc_version: v3.11.0.0git-404-g7c433cd2
