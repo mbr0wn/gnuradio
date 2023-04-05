@@ -30,6 +30,7 @@ gr_python_install(
           toggleswitch.py
           graphicoverlay.py
           auto_correlator_sink.py
+          fosphorgl_sink.py
           "${CMAKE_CURRENT_BINARY_DIR}/range.py"
           "${CMAKE_CURRENT_BINARY_DIR}/util.py"
     DESTINATION ${GR_PYTHON_DIR}/gnuradio/qtgui)

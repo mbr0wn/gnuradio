@@ -47,6 +47,7 @@ set(QTGUI_SOURCES
     time_sink_f_impl.cc
     time_raster_sink_b_impl.cc
     time_raster_sink_f_impl.cc
+    fosphor_formatter_impl.cc
     freq_sink_c_impl.cc
     freq_sink_f_impl.cc
     const_sink_c_impl.cc
