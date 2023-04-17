@@ -15,6 +15,8 @@
 #include <gnuradio/fft/window.h>
 #include <gnuradio/io_signature.h>
 #include <cmath>
+#include <cstring>
+#include <iostream>
 
 
 namespace {
@@ -29,10 +31,11 @@ void float_array_to_uchar(const float* in,
     constexpr int MAX_UCHAR = 255;
     for (int i = 0; i < nsamples; i++) {
         long int r = (long int)rint(in[i] * scaling);
-        if (r < MIN_UCHAR)
+        if (r < MIN_UCHAR) {
             r = MIN_UCHAR;
-        else if (r > MAX_UCHAR)
+        } else if (r > MAX_UCHAR) {
             r = MAX_UCHAR;
+        }
         out[i] = r;
     }
 }
@@ -93,7 +96,7 @@ fosphor_formatter_impl::fosphor_formatter_impl(int fft_size,
       d_epsilon(epsilon),
       d_trise(trise),
       d_tdecay(tdecay),
-      d_maxhold_buf(fft_size, 0.0f),      
+      d_maxhold_buf(fft_size, 0.0f),
       d_histo_buf_f(fft_size * d_num_bins, 0.0f),
       d_hit_count(fft_size * d_num_bins, 0),
       // Init sub-blocks
@@ -187,10 +190,11 @@ int fosphor_formatter_impl::_process_histogram(gr::blocks::lambda_block* self,
     const float* in_logfft_avg = static_cast<const float*>(input_items[2]);
     unsigned char* out = static_cast<unsigned char*>(output_items[0]);
 
+    // Decay previous max hold value
+    volk_32f_s32f_multiply_32f(
+        d_maxhold_buf.data(), d_maxhold_buf.data(), d_epsilon, d_fftsize);
     for (int i; i < items_to_process; i++) {
         //// Update max hold:
-        // Decay previous value
-        volk_32f_s32f_multiply_32f(d_maxhold_buf.data(), d_maxhold_buf.data(), d_epsilon, d_fftsize);
         // Compare with current max
         volk_32f_x2_max_32f(
             d_maxhold_buf.data(), d_maxhold_buf.data(), in_logfft_f, d_fftsize);
@@ -198,10 +202,7 @@ int fosphor_formatter_impl::_process_histogram(gr::blocks::lambda_block* self,
         for (size_t i = 0; i < static_cast<size_t>(d_fftsize); i++) {
             // This >>2 assumes d_num_bins is 64
             const uint8_t bin_index = in_logfft_b[i] >> 2;
-            for (size_t j = 0; j < bin_index; j++)
-            {
-                d_hit_count[j * d_fftsize + i]++;
-            }
+            d_hit_count[bin_index * d_fftsize + i]++;
         }
         d_histo_count++;
         in_logfft_f += d_fftsize;
@@ -220,12 +221,12 @@ int fosphor_formatter_impl::_process_histogram(gr::blocks::lambda_block* self,
 
     // Copy the histogram buffer
     float_array_to_uchar(d_histo_buf_f.data(), out, d_fftsize * d_num_bins, 256);
-    // Copy average to out buffer
-    const int avg_idx = d_num_bins * d_fftsize;
-    const int maxhold_idx = avg_idx + d_fftsize;
-    float_array_to_uchar(in_logfft_avg, out + avg_idx, d_fftsize);
     // Copy max hold to out buffer
+    const int maxhold_idx = d_num_bins * d_fftsize;
+    const int avg_idx = maxhold_idx + d_fftsize;
     float_array_to_uchar(d_maxhold_buf.data(), out + maxhold_idx, d_fftsize);
+    // Copy average to out buffer
+    float_array_to_uchar(in_logfft_avg, out + avg_idx, d_fftsize);
     const int num_items_written = d_num_bins + 2;
     // Insert stream tag
     auto tag = gr::tag_t{};
@@ -236,12 +237,12 @@ int fosphor_formatter_impl::_process_histogram(gr::blocks::lambda_block* self,
 
     // Reset hit counter
     std::fill(d_hit_count.begin(), d_hit_count.end(), 0);
-    return d_num_bins + 2;
+    return num_items_written;
 }
 
 void fosphor_formatter_impl::_update_histo_val(float& hv, const int16_t hc)
 {
-    // This is copied from gr-fosphor
+    // All of this is copied from gr-fosphor
     if (hv < 0.01f && hc == 0) {
         return;
     }

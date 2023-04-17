@@ -35,12 +35,12 @@ parameters:
 -   id: alpha
     label: FFT Averaging (Alpha)
     dtype: real
-    default: 0.9
+    default: 0.1
     hide: part
 -   id: epsilon
     label: Max-Hold Decay (Epsilon)
     dtype: real
-    default: 0.9
+    default: 0.99
     hide: part
 -   id: trise
     label: Rise Constant
@@ -87,7 +87,7 @@ templates:
     <%
         win = 'self._%s_win' % id
     %>\
-    qtgui.FosphorGlSink(${input_decim}, ${wf_decim}, ${wf_lines}, ${histo_decim}, ${scale}, ${alpha}, ${epsilon}, ${trise}, ${tdecay})
+    uhd.FosphorGlSink(${input_decim}, ${wf_decim}, ${wf_lines}, ${histo_decim}, ${scale}, ${alpha}, ${epsilon}, ${trise}, ${tdecay})
     self.${id}.fosphor_sink.set_frame_rate(${frame_rate})
     self.${id}.fosphor_sink.set_frequency_range(${center_freq}, ${samp_rate})
     self.${id}.fosphor_sink.set_waterfall(True)
